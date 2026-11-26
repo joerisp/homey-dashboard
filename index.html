@@ -540,7 +540,7 @@ function zoneName(id){
   const pick = path[Math.min(2, path.length - 1)];
   return ZONES[pick].name;
 }
-const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda']).map(x => x.toLowerCase());  // zones die niet getoond worden
+const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda', 'Gang', 'Garderobe']).map(x => x.toLowerCase());  // zones die niet getoond worden
 const NO_LIGHTS = (P.has('geenlampen') ? list(P.get('geenlampen')) : ['Keuken', 'Woonkamer']).map(x => x.toLowerCase());  // zones zonder lampen
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur
 function render(){

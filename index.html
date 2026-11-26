@@ -145,7 +145,7 @@ const CFG = {
   homey: normBase(P.get('homey') || ''),
   key: P.get('key') || '',
   zones: list(P.get('zones')),
-  exclude: (P.has('exclude') ? list(P.get('exclude')) : ['Badkamer vloer', 'Joeri', 'Mirella']).map(s => s.toLowerCase()),
+  exclude: (P.has('exclude') ? list(P.get('exclude')) : ['Badkamer vloer', 'Joeri', 'Mirella', 'Wies aquarium']).map(s => s.toLowerCase()),
   heat: list(P.get('heat')).map(s => s.toLowerCase()),
   stroomprijs: num(P.get('stroomprijs')),   // vaste all-in prijs €/kWh; leeg = dynamisch
   gasprijs: num(P.get('gasprijs')),         // vaste all-in prijs €/m³; leeg = dynamisch

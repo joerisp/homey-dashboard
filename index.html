@@ -457,7 +457,8 @@ function heating(devs){
   const modeOff = thermos.length && thermos.every(d => v(d,'thermostat_mode') === 'off');
   const demand = thermos.some(d => v(d,'target_temperature') > v(d,'measure_temperature') + 0.3);
   if (gasOn == null && gasFlow != null && gasFlow > 0.05) { gasOn = true; why = 'gasverbruik'; }
-  const t = thermos[0];
+  const tScore = d => (/thermostaat|nest/i.test(d.name)?2:0) + (d.class==='thermostat'?1:0) - (/vloer/i.test(d.name)?3:0);
+  const t = thermos.slice().sort((a,b) => tScore(b) - tScore(a))[0];
   let state, cls = '';
   if (modeOff) state = 'Verwarming uit';
   else if (hyTxt && (gasOn || elOn)) { state = hyTxt.replace(/^actief\s*·\s*/i, 'Verwarmt · '); cls = 'on'; }
@@ -515,6 +516,7 @@ function energy(devs){
     let m3 = 0, since = null, flow = null, stand = null;
     gas.forEach(d => { const x = has(d,'meter_gas') && delta(d,'meter_gas'); if (x){ m3 += x.val; since = since || x.since; }
       if (has(d,'measure_gas')) flow = (flow || 0) + (v(d,'measure_gas') || 0); if (has(d,'meter_gas')) stand = v(d,'meter_gas'); });
+    const gd = gas.find(d => has(d,'meter_gas.daily')); if (gd){ m3 = v(gd,'meter_gas.daily') || 0; since = null; }
     const sub = (flow != null ? `Gas ${sinceTxt(since)} · ${new Intl.NumberFormat('nl-NL',{maximumFractionDigits:2}).format(flow)}/u` : `Gas ${sinceTxt(since)} · stand ${nf0.format(stand||0)} m³`);
     out.push(`<div class="etile" style="color:var(--on)">${svg('flame')}<div><div class="v" style="color:var(--text)">${new Intl.NumberFormat('nl-NL',{maximumFractionDigits:2,minimumFractionDigits:2}).format(m3)}<small> m³</small></div><div class="l">${sub}</div></div></div>`);
   }

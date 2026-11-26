@@ -544,7 +544,7 @@ const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Ver
 const NO_LIGHTS = (P.has('geenlampen') ? list(P.get('geenlampen')) : ['Keuken', 'Woonkamer']).map(x => x.toLowerCase());  // zones zonder lampen
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur
 function render(){
-  const devs = Object.values(DEVICES).filter(d => !CFG.exclude.includes((d.name||'').toLowerCase()));
+  const devs = Object.values(DEVICES).filter(d => !CFG.exclude.includes((d.name||'').trim().toLowerCase()));
   $('#energy').innerHTML = energy(devs);
   $('#tariff').innerHTML = tariffBar();
   const groups = {};

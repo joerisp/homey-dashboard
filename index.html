@@ -509,7 +509,8 @@ function energy(devs){
     const dv = findT(/^(dag ?verbruik|kwh deze dag)$/i);
     if (dv && typeof dv.value === 'number'){ kwh = dv.value; since = null; }
     const money = findT(/^geld deze dag$/i);
-    const scost = money && typeof money.value === 'number' ? eur(money.value, 2) : (PRICE.stroom != null ? '≈' + eur(kwh * PRICE.stroom, 2) : '');
+    const dayAvg = findT(/^gem\.? prijs deze dag$/i);
+    const scost = dayAvg && typeof dayAvg.value === 'number' ? '≈' + eur(kwh * dayAvg.value, 2) : (money && typeof money.value === 'number' ? eur(money.value, 2) : (PRICE.stroom != null ? '≈' + eur(kwh * PRICE.stroom, 2) : ''));
     const lbl = (exp > 0.05 && w < 0 ? `Terug ${sinceTxt(since)}: ${nf1.format(exp)} kWh` : (scost ? `${scost} ${sinceTxt(since)}` : `Stroom ${sinceTxt(since)}`));
     out.push(`<div class="etile" style="color:var(--cool)">${svg('bolt')}<div><div class="v" style="color:${w<0?'var(--good)':'var(--text)'}">${w<0?'−':''}${watt(Math.abs(w))} <small>${nf1.format(kwh)} kWh</small></div><div class="l">${lbl}</div></div></div>`);
   }

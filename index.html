@@ -540,6 +540,7 @@ function zoneName(id){
   const pick = path[Math.min(2, path.length - 1)];
   return ZONES[pick].name;
 }
+const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor']).map(x => x.toLowerCase());  // zones die niet getoond worden
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur
 function render(){
   const devs = Object.values(DEVICES).filter(d => !CFG.exclude.includes((d.name||'').toLowerCase()));
@@ -547,7 +548,7 @@ function render(){
   $('#tariff').innerHTML = tariffBar();
   const groups = {};
   const inStrip = d => (d.energyObj && d.energyObj.cumulative) || has(d,'meter_power.imported') || ['solarpanel','battery','homebattery'].includes(d.class);
-  devs.forEach(d => { if (inStrip(d)) return; const z = zoneName(d.zone); if (TEMP_ONLY.includes(z.toLowerCase()) && !((has(d,'measure_temperature') || has(d,'target_temperature')) && d.available !== false)) return; const tOnly = TEMP_ONLY.includes(z.toLowerCase()) && !has(d,'target_temperature'); const t = tile(tOnly ? {...d, capabilities: d.capabilities.filter(c => /^measure_(temperature|humidity)$/.test(c))} : d); if (!t) return; (groups[z] = groups[z] || []).push([d, t]); });
+  devs.forEach(d => { if (inStrip(d)) return; const z = zoneName(d.zone); if (HIDE_ZONES.includes(z.toLowerCase())) return; if (TEMP_ONLY.includes(z.toLowerCase()) && !((has(d,'measure_temperature') || has(d,'target_temperature')) && d.available !== false)) return; const tOnly = TEMP_ONLY.includes(z.toLowerCase()) && !has(d,'target_temperature'); const t = tile(tOnly ? {...d, capabilities: d.capabilities.filter(c => /^measure_(temperature|humidity)$/.test(c))} : d); if (!t) return; (groups[z] = groups[z] || []).push([d, t]); });
   let names = Object.keys(groups);
   if (CFG.zones.length){
     const want = CFG.zones.map(s => s.toLowerCase());

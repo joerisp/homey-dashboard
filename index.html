@@ -510,7 +510,7 @@ function energy(devs){
     if (dv && typeof dv.value === 'number'){ kwh = dv.value; since = null; }
     const money = findT(/^geld deze dag$/i);
     const scost = money && typeof money.value === 'number' ? eur(money.value, 2) : (PRICE.stroom != null ? '≈' + eur(kwh * PRICE.stroom, 2) : '');
-    const lbl = (exp > 0.05 && w < 0 ? `Terug ${sinceTxt(since)}: ${nf1.format(exp)} kWh` : `Stroom ${sinceTxt(since)}`) + (scost ? ' · ' + scost : '');
+    const lbl = (exp > 0.05 && w < 0 ? `Terug ${sinceTxt(since)}: ${nf1.format(exp)} kWh` : (scost ? `${scost} ${sinceTxt(since)}` : `Stroom ${sinceTxt(since)}`));
     out.push(`<div class="etile" style="color:var(--cool)">${svg('bolt')}<div><div class="v" style="color:${w<0?'var(--good)':'var(--text)'}">${w<0?'−':''}${watt(Math.abs(w))} <small>${nf1.format(kwh)} kWh</small></div><div class="l">${lbl}</div></div></div>`);
   }
   const gas = gasDevs(devs);
@@ -520,7 +520,7 @@ function energy(devs){
       if (has(d,'measure_gas')) flow = (flow || 0) + (v(d,'measure_gas') || 0); if (has(d,'meter_gas')) stand = v(d,'meter_gas'); });
     const gd = gas.find(d => has(d,'meter_gas.daily')); if (gd){ m3 = v(gd,'meter_gas.daily') || 0; since = null; }
     const gcost = PRICE.gas != null ? '≈' + eur(m3 * PRICE.gas, 2) : '';
-    const sub = gcost ? `Gas ${sinceTxt(since)} · ${gcost}` : (flow != null ? `Gas ${sinceTxt(since)} · ${new Intl.NumberFormat('nl-NL',{maximumFractionDigits:2}).format(flow)}/u` : `Gas ${sinceTxt(since)} · stand ${nf0.format(stand||0)} m³`);
+    const sub = gcost ? `${gcost} ${sinceTxt(since)}` : (flow != null ? `Gas ${sinceTxt(since)} · ${new Intl.NumberFormat('nl-NL',{maximumFractionDigits:2}).format(flow)}/u` : `Gas ${sinceTxt(since)} · stand ${nf0.format(stand||0)} m³`);
     out.push(`<div class="etile" style="color:var(--on)">${svg('flame')}<div><div class="v" style="color:var(--text)">${new Intl.NumberFormat('nl-NL',{maximumFractionDigits:2,minimumFractionDigits:2}).format(m3)}<small> m³</small></div><div class="l">${sub}</div></div></div>`);
   }
   if (solar.length){
@@ -543,7 +543,7 @@ function zoneName(id){
   const pick = path[Math.min(2, path.length - 1)];
   return ZONES[pick].name;
 }
-const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda', 'Gang', 'Garderobe', 'Tuin', 'Voorraadkast', 'Zolder']).map(x => x.toLowerCase());  // zones die niet getoond worden
+const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda', 'Gang', 'Garderobe', 'Tuin', 'Voorraadkast', 'Zolder', 'Begane grond']).map(x => x.toLowerCase());  // zones die niet getoond worden
 const NO_LIGHTS = (P.has('geenlampen') ? list(P.get('geenlampen')) : ['Keuken', 'Woonkamer']).map(x => x.toLowerCase());  // zones zonder lampen
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur
 function render(){

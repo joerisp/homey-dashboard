@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homey Dashboard</title>
+<style>
+  :root{
+    --bg:#0e1014; --card:#181b22; --card2:#20242d; --line:#2a2f3a;
+    --text:#eef0f4; --muted:#8b93a3; --on:#ffb547; --cool:#5fb4ff;
+    --good:#4fd18b; --bad:#ff6b6b; --sun:#ffd54a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--text);
+    font-family:"Google Sans",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+  body.night{filter:brightness(.55)}
+  #app{height:100vh;display:flex;flex-direction:column;padding:14px 18px 12px;gap:12px}
+
+  /* Kopbalk */
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .clock{font-size:52px;font-weight:500;letter-spacing:-1px;line-height:1}
+  .date{color:var(--muted);font-size:17px;margin-top:4px}.date::first-letter{text-transform:uppercase}
+  .weather{display:flex;align-items:center;gap:18px}
+  .wnow{display:flex;align-items:center;gap:8px;font-size:38px;font-weight:500}
+  .wnow svg{width:42px;height:42px}
+  .wdays{display:flex;gap:12px}
+  .wday{text-align:center;font-size:13px;color:var(--muted);min-width:44px}
+  .wday svg{width:24px;height:24px;display:block;margin:3px auto}
+  .wday b{color:var(--text);font-weight:500}
+
+  /* Energie */
+  #energy{display:flex;gap:10px}
+  #energy:empty,#tariff:empty{display:none}
+  #tariff{display:flex;background:var(--card);border-radius:16px;padding:8px 4px}
+  .tc{flex:1;padding:2px 12px;border-left:1px solid var(--line);min-width:0}
+  .tc:first-child{border-left:0;flex:1.5}
+  .tc.wide{flex:1.5}
+  .tc .l{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tc .l small{opacity:.8}
+  .tc .v{font-size:19px;font-weight:500;white-space:nowrap}
+  .tc .v small{font-size:12px;color:var(--muted);font-weight:400}
+  .tc.best .v{color:var(--good)}
+  .tc.win .v{color:var(--good)}
+  .tc .warn{color:#ffd36b !important}
+  .etile{flex:1;background:var(--card);border-radius:16px;padding:10px 12px;display:flex;align-items:center;gap:12px;min-width:0}
+  .etile svg{width:28px;height:28px;flex:none}
+  .etile .v{font-size:22px;font-weight:500;white-space:nowrap}
+  .etile .l{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .etile>div{min-width:0}
+  .etile .v small{font-size:14px;color:var(--muted)}
+  .etile.heat{flex:1.3;color:var(--muted)}
+  .etile.heat.on{background:#3a2a1a;color:#ff8a3d}
+  .etile.heat.on .l{color:#ffb98a}
+  .etile .cmp{font-size:12px;color:var(--good);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .etile .cmp b{font-weight:600}
+  .etile .cmp.warn{color:#ffd36b}
+
+
+  /* Zones */
+  #zones{flex:1;overflow:hidden;position:relative}
+  #zinner{columns:3 300px;column-gap:12px;transition:transform .9s ease}
+  .zone{break-inside:avoid;background:var(--card);border-radius:18px;padding:12px 12px 6px;margin-bottom:12px}
+  .zone h2{font-size:15px;font-weight:500;color:var(--muted);margin:0 4px 8px;text-transform:uppercase;letter-spacing:.6px}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+  .tile{background:var(--card2);border-radius:14px;padding:10px 11px;min-height:70px;display:flex;flex-direction:column;justify-content:space-between;
+    cursor:pointer;user-select:none;position:relative;transition:background .25s}
+  .tile.wide{grid-column:span 2}
+  .tile .top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .tile svg{width:22px;height:22px;color:var(--muted);flex:none}
+  .tile .name{font-size:13px;color:var(--muted);line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .tile .val{font-size:20px;font-weight:500;white-space:nowrap}
+  .tile .val small{font-size:13px;color:var(--muted);font-weight:400;margin-left:3px}
+  .tile.on{background:#3a2f1c}
+  .tile.on svg{color:var(--on)}
+  .tile.on .val{color:var(--on)}
+  .tile.alert{background:#3a1f22}
+  .tile.alert svg,.tile.alert .val{color:var(--bad)}
+  .tile.off{opacity:.45}
+  .tile .bar{position:absolute;left:0;bottom:0;height:3px;border-radius:0 0 0 14px;background:var(--on)}
+  .badge{font-size:11px;color:var(--bad)}
+  .thermo{display:flex;align-items:center;gap:8px}
+  .thermo button{background:var(--line);color:var(--text);border:0;border-radius:10px;width:30px;height:30px;font-size:18px;cursor:pointer}
+
+  #status{position:fixed;right:14px;bottom:10px;font-size:11px;color:var(--muted)}
+  #error{position:fixed;left:18px;right:18px;bottom:14px;background:#3a1f22;color:#ffd6d6;border-radius:12px;padding:10px 14px;font-size:14px;display:none}
+
+  /* Setup */
+  #setup{display:none;max-width:640px;margin:28px auto;padding:0 18px;overflow:auto;height:100vh}
+  #setup h1{font-size:26px;font-weight:500;margin-bottom:6px}
+  #setup p{color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.5}
+  #setup label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+  #setup input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font-size:15px}
+  #setup .row{display:flex;gap:10px}#setup .row>div{flex:1}
+  #setup button{margin-top:18px;background:var(--on);color:#1b1306;border:0;border-radius:10px;padding:11px 18px;font-size:15px;font-weight:600;cursor:pointer;margin-right:8px}
+  #setup button.sec{background:var(--card2);color:var(--text)}
+  #out{margin-top:16px;word-break:break-all;background:var(--card);border-radius:10px;padding:12px;font-size:13px;display:none}
+</style>
+</head>
+<body>
+<div id="app" style="display:none">
+  <header>
+    <div><div class="clock" id="clock">--:--</div><div class="date" id="date"></div></div>
+    <div class="weather" id="weather"></div>
+  </header>
+  <div id="energy"></div>
+  <div id="tariff"></div>
+  <div id="zones"><div id="zinner"></div></div>
+</div>
+<div id="status"></div>
+<div id="error"></div>
+
+<div id="setup">
+  <h1>Homey dashboard instellen</h1>
+  <p>Vul je Homey-adres en een API-sleutel in (Homey Web App → Instellingen → API-sleutels, rechten: <i>Apparaten</i> en <i>Zones</i> lezen; voor bedienen ook <i>Apparaten bedienen</i>).
+     De gegevens komen alleen in de link achter het #-teken, die wordt nooit naar een webserver gestuurd.</p>
+  <label>Homey-adres – lokaal (https://192-168-1-50.homey.homeylocal.com) of cloud-ID</label>
+  <input id="f_homey" value="65b3a0baacf8aa14441ca7e1" placeholder="https://192-168-1-50.homey.homeylocal.com">
+  <label>API-sleutel</label>
+  <input id="f_key" placeholder="xxxxxxxx-xxxx-...:...">
+  <label>Zones tonen (optioneel, komma-gescheiden, in deze volgorde)</label>
+  <input id="f_zones" placeholder="Woonkamer, Keuken, Tuin">
+  <label>Apparaten verbergen (optioneel, komma-gescheiden namen)</label>
+  <input id="f_exclude" placeholder="Test lamp, Oude sensor">
+  <div class="row">
+    <div><label>Weer – breedtegraad</label><input id="f_lat" value="52.68"></div>
+    <div><label>Weer – lengtegraad</label><input id="f_lon" value="4.90"></div>
+    <div><label>Nachtstand (uur-uur)</label><input id="f_night" value="23-7"></div>
+  </div>
+  <label>Verwarming (optioneel): namen van thermostaat / cv-ketel / warmtepomp – leeg = automatisch zoeken</label>
+  <input id="f_heat" placeholder="Thermostaat, CV-ketel">
+  <div class="row">
+    <div><label>Stroomprijs €/kWh (leeg = dynamisch)</label><input id="f_stroomprijs" placeholder="0,27"></div>
+    <div><label>Gasprijs €/m³ (leeg = dynamisch)</label><input id="f_gasprijs" placeholder="1,34"></div>
+    <div><label>COP warmtepomp (leeg = auto)</label><input id="f_cop" placeholder="4"></div>
+  </div>
+  <button id="b_make">Maak dashboard-link</button><button class="sec" id="b_demo">Bekijk demo</button>
+  <div id="out"></div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const P = new URLSearchParams(location.hash.slice(1));
+const CFG = {
+  homey: normBase(P.get('homey') || ''),
+  key: P.get('key') || '',
+  zones: list(P.get('zones')),
+  exclude: list(P.get('exclude')).map(s => s.toLowerCase()),
+  heat: list(P.get('heat')).map(s => s.toLowerCase()),
+  stroomprijs: num(P.get('stroomprijs')),   // vaste all-in prijs €/kWh; leeg = dynamisch
+  gasprijs: num(P.get('gasprijs')),         // vaste all-in prijs €/m³; leeg = dynamisch
+  opslagStroom: num(P.get('opslag_stroom')) ?? 0.02,  // inkoopvergoeding leverancier incl. btw
+  opslagGas: num(P.get('opslag_gas')) ?? 0.08,
+  ebStroom: num(P.get('eb_stroom')) ?? 0.11085,       // energiebelasting 2026 incl. btw
+  ebGas: num(P.get('eb_gas')) ?? 0.72680,
+  cop: num(P.get('cop')),                   // rendement warmtepomp; leeg = 4 (warmtepomp) of 1 (elektrische kachel)
+  rendement: num(P.get('rendement')) ?? 0.90,  // rendement cv-ketel
+  lat: parseFloat(P.get('lat') || '52.68'),
+  lon: parseFloat(P.get('lon') || '4.90'),
+  refresh: Math.max(3, parseInt(P.get('refresh') || '8', 10)),
+  night: P.get('night') || '23-7',
+  demo: P.has('demo')
+};
+function num(s){ if (s == null || s === '') return null; const n = parseFloat(String(s).replace(',','.')); return isNaN(n) ? null : n; }
+function list(s){ return (s || '').split(',').map(x => x.trim()).filter(Boolean); }
+function normBase(s){
+  s = s.trim().replace(/\/+$/, '');
+  if (!s) return '';
+  if (/^[a-f0-9]{24}$/i.test(s)) return `https://${s}.connect.athom.com`;
+  if (!/^https?:\/\//.test(s)) s = 'https://' + s;
+  return s;
+}
+
+/* ---------- iconen ---------- */
+const I = {
+  light:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  socket:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9.5 10v2M14.5 10v2M10 16h4"/>',
+  thermo:'<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>',
+  door:'<path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14.5 12h.01"/>',
+  motion:'<circle cx="13" cy="4.5" r="1.8"/><path d="M9 21l2.5-6 2.5 2v4M7 12l3-4h4l3 3 2 0M11.5 15l1-5"/>',
+  bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  battery:'<rect x="3" y="7" width="16" height="10" rx="2"/><path d="M22 11v2M7 10v4M11 10v4"/>',
+  drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  blind:'<path d="M4 4h16M5 4v12h14V4M5 8h14M5 12h14M12 16v3"/>',
+  car:'<path d="M5 16l1.5-5a2 2 0 0 1 2-1.5h7a2 2 0 0 1 2 1.5L19 16M4 16h16v3H4zM7 19v1.5M17 19v1.5"/>',
+  tv:'<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/>',
+  speaker:'<rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14" r="3"/><path d="M12 7h.01"/>',
+  fan:'<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 4-7s2 5-2 7M14 12c4 0 7 1 7 4s-5 2-7-2M12 14c0 4-1 7-4 7s-2-5 2-7M10 12c-4 0-7-1-7-4s5-2 7 2"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  dot:'<circle cx="12" cy="12" r="4"/>',
+  flame:'<path d="M12 22c4 0 7-2.8 7-6.8 0-3.6-2.4-5.9-4-8.2-.7 1.6-1.6 2.6-2.8 3C12.6 6.8 11 4.2 8.5 2c.3 3.4-3.5 6.3-3.5 11.2C5 19.2 8 22 12 22z"/>',
+  grid:'<path d="M12 2v6M8 8h8l-2 14h-4zM5 5l14 0M3 11h18"/>',
+  home:'<path d="M3 11l9-7 9 7M5 10v10h14V10"/>'
+};
+const svg = (k, cls='') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[k]||I.dot}</svg>`;
+
+/* weer-iconen (WMO-codes van Open-Meteo) */
+const WI = {
+  sun:'<circle cx="12" cy="12" r="4.5" fill="#ffd54a" stroke="none"/><path stroke="#ffd54a" d="M12 2v2.5M12 19.5V22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2 12h2.5M19.5 12H22M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/>',
+  partly:'<circle cx="9" cy="9" r="3.6" fill="#ffd54a" stroke="none"/><path fill="#c9d1de" stroke="none" d="M8 20h9a4 4 0 0 0 0-8 5 5 0 0 0-9.5 1.6A3.2 3.2 0 0 0 8 20z"/>',
+  cloud:'<path fill="#aab3c2" stroke="none" d="M7 19h10a4.5 4.5 0 0 0 0-9 5.5 5.5 0 0 0-10.5 2A3.5 3.5 0 0 0 7 19z"/>',
+  fog:'<path stroke="#aab3c2" d="M4 9h16M3 13h18M5 17h14"/>',
+  rain:'<path fill="#aab3c2" stroke="none" d="M7 15h10a4 4 0 0 0 0-8 5 5 0 0 0-9.6 1.8A3.1 3.1 0 0 0 7 15z"/><path stroke="#5fb4ff" d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+  snow:'<path fill="#aab3c2" stroke="none" d="M7 15h10a4 4 0 0 0 0-8 5 5 0 0 0-9.6 1.8A3.1 3.1 0 0 0 7 15z"/><path stroke="#fff" d="M8 19h.01M12 21h.01M16 19h.01"/>',
+  storm:'<path fill="#8a93a3" stroke="none" d="M7 14h10a4 4 0 0 0 0-8 5 5 0 0 0-9.6 1.8A3.1 3.1 0 0 0 7 14z"/><path stroke="#ffd54a" d="M12 14l-2 4h3l-2 4"/>'
+};
+function wkind(c){
+  if (c === 0) return 'sun'; if (c <= 2) return 'partly'; if (c === 3) return 'cloud';
+  if (c <= 48) return 'fog'; if (c >= 95) return 'storm';
+  if ((c >= 71 && c <= 77) || c === 85 || c === 86) return 'snow';
+  return 'rain';
+}
+const wsvg = c => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round">${WI[wkind(c)]}</svg>`;
+
+/* ---------- opmaak ---------- */
+const nf0 = new Intl.NumberFormat('nl-NL',{maximumFractionDigits:0});
+const nf1 = new Intl.NumberFormat('nl-NL',{maximumFractionDigits:1, minimumFractionDigits:1});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function watt(w){
+  const a = Math.abs(w);
+  return a >= 1000 ? `${nf1.format(w/1000)}<small>kW</small>` : `${nf0.format(w)}<small>W</small>`;
+}
+
+/* ---------- klok & nacht ---------- */
+function tick(){
+  const d = new Date();
+  $('#clock').textContent = d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+  $('#date').textContent = d.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+  const [a,b] = CFG.night.split('-').map(Number);
+  const h = d.getHours();
+  const night = !isNaN(a) && !isNaN(b) && (a > b ? (h >= a || h < b) : (h >= a && h < b));
+  document.body.classList.toggle('night', night);
+}
+
+/* ---------- weer ---------- */
+async function loadWeather(){
+  if (isNaN(CFG.lat) || isNaN(CFG.lon)) return;
+  try{
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat}&longitude=${CFG.lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4`;
+    const w = await (await fetch(u)).json();
+    const days = w.daily.time.slice(1,4).map((t,i) => {
+      const n = new Date(t).toLocaleDateString('nl-NL',{weekday:'short'});
+      return `<div class="wday">${n}${wsvg(w.daily.weather_code[i+1])}<b>${Math.round(w.daily.temperature_2m_max[i+1])}°</b> ${Math.round(w.daily.temperature_2m_min[i+1])}°</div>`;
+    }).join('');
+    $('#weather').innerHTML = `<div class="wnow">${wsvg(w.current.weather_code)}${Math.round(w.current.temperature_2m)}°</div><div class="wdays">${days}</div>`;
+  }catch(e){ /* weer is optioneel */ }
+}
+
+/* ---------- Homey API ---------- */
+async function api(path, opts = {}){
+  const r = await fetch(CFG.homey + path, {
+    ...opts,
+    headers: { 'Authorization': 'Bearer ' + CFG.key, 'Content-Type': 'application/json' }
+  });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText || ''}`.trim());
+  return r.status === 204 ? null : r.json();
+}
+let ZONES = {}, DEVICES = {};
+async function loadHomey(){
+  if (CFG.demo) { demoStep(); await loadBaselines(); return; }
+  const [z, d] = await Promise.all([
+    Object.keys(ZONES).length ? Promise.resolve(ZONES) : api('/api/manager/zones/zone/'),
+    api('/api/manager/devices/device/')
+  ]);
+  ZONES = z; DEVICES = d;
+  await loadBaselines();
+}
+async function setCap(id, cap, value){
+  const dev = DEVICES[id];
+  if (dev && dev.capabilitiesObj[cap]) dev.capabilitiesObj[cap].value = value;  // optimistisch
+  render();
+  if (CFG.demo) return;
+  try { await api(`/api/manager/devices/device/${id}/capability/${cap}`, {method:'PUT', body: JSON.stringify({value})}); }
+  catch(e){ showError('Bedienen mislukt: ' + e.message + ' – heeft de API-sleutel het recht "Apparaten bedienen"?'); }
+}
+
+/* ---------- tegels ---------- */
+const v = (d,c) => d.capabilitiesObj && d.capabilitiesObj[c] ? d.capabilitiesObj[c].value : undefined;
+const has = (d,c) => d.capabilities && d.capabilities.includes(c) && d.capabilitiesObj && d.capabilitiesObj[c];
+const ICON_BY_CLASS = {light:'light',socket:'socket',thermostat:'thermo',heater:'thermo',sensor:'dot',windowcoverings:'blind',
+  sunshade:'blind',curtain:'blind',blinds:'blind',lock:'lock',tv:'tv',speaker:'speaker',fan:'fan',evcharger:'car',
+  solarpanel:'sun',boiler:'flame',heatpump:'fan',battery:'battery',homebattery:'battery',doorbell:'home'};
+
+function tile(d){
+  const name = esc(d.name);
+  let icon = ICON_BY_CLASS[d.class] || 'dot', val = '', cls = '', wide = false, extra = '', act = '';
+  const bat = v(d,'measure_battery');
+  const lowBat = v(d,'alarm_battery') === true || (typeof bat === 'number' && bat < 15);
+
+  if (has(d,'target_temperature')){
+    icon = 'thermo'; wide = true;
+    const t = v(d,'target_temperature'), m = v(d,'measure_temperature');
+    val = `${m != null ? nf1.format(m)+'°' : '–'}<small>doel ${t != null ? nf1.format(t)+'°' : '–'}</small>`;
+    extra = `<div class="thermo"><button data-act="tt" data-d="-0.5">−</button><button data-act="tt" data-d="0.5">+</button></div>`;
+    if (m != null && t != null && t > m + 0.3) cls = 'on';
+  } else if (has(d,'onoff')){
+    const on = v(d,'onoff') === true;
+    cls = on ? 'on' : ''; act = 'toggle';
+    if (has(d,'dim') && on) val = `${Math.round((v(d,'dim')||0)*100)}<small>%</small>`;
+    else if (has(d,'measure_power') && on && d.class !== 'light') val = watt(v(d,'measure_power')||0);
+    else val = on ? 'Aan' : 'Uit';
+    if (has(d,'dim') && on) extra = `<div class="bar" style="width:${Math.round((v(d,'dim')||0)*100)}%"></div>`;
+  } else if (has(d,'windowcoverings_set')){
+    icon = 'blind'; val = `${Math.round((v(d,'windowcoverings_set')||0)*100)}<small>% open</small>`;
+  } else if (has(d,'alarm_contact')){
+    icon = 'door'; const o = v(d,'alarm_contact') === true; val = o ? 'Open' : 'Dicht'; cls = o ? 'alert' : '';
+  } else if (has(d,'alarm_motion')){
+    icon = 'motion'; const m = v(d,'alarm_motion') === true; val = m ? 'Beweging' : 'Rustig'; cls = m ? 'on' : '';
+  } else if (has(d,'alarm_water') || has(d,'alarm_smoke')){
+    icon = has(d,'alarm_water') ? 'drop' : 'dot';
+    const a = v(d,'alarm_water') === true || v(d,'alarm_smoke') === true; val = a ? 'ALARM' : 'OK'; cls = a ? 'alert' : '';
+  } else if (has(d,'measure_temperature')){
+    icon = 'thermo';
+    val = `${nf1.format(v(d,'measure_temperature'))}°`;
+    if (has(d,'measure_humidity')) val += `<small>${nf0.format(v(d,'measure_humidity'))}%</small>`;
+  } else if (has(d,'measure_power')){
+    icon = icon === 'dot' ? 'bolt' : icon; val = watt(v(d,'measure_power')||0);
+  } else if (has(d,'locked')){
+    icon = 'lock'; const l = v(d,'locked') === true; val = l ? 'Op slot' : 'Open'; cls = l ? '' : 'alert';
+  } else {
+    return '';  // niets zinnigs om te tonen
+  }
+  if (d.available === false){ cls = 'off'; val = 'Offline'; act = ''; extra = ''; }
+  return `<div class="tile ${cls} ${wide?'wide':''}" data-id="${d.id}" ${act?`data-act="${act}"`:''}>
+    <div class="top">${svg(icon)}${lowBat?'<span class="badge">batterij</span>':''}${wide?extra:''}</div>
+    <div><div class="val">${val}</div><div class="name">${name}</div></div>${wide?'':extra}</div>`;
+}
+
+/* ---------- energie ---------- */
+/* "vandaag"-verbruik: beginstand van vandaag uit Homey Insights, anders zelf bijgehouden */
+const TD = {};
+const todayKey = () => new Date().toDateString();
+async function baseline(d, cap){
+  const key = d.id + ':' + cap, today = todayKey();
+  if (TD[key] && TD[key].date === today) return;
+  let base = null, since = null;
+  if (!CFG.demo){
+    for (const id of [cap, `homey:device:${d.id}:${cap}`]){
+      try{
+        const r = await api(`/api/manager/insights/log/${encodeURIComponent('homey:device:'+d.id)}/${encodeURIComponent(id)}/entry?resolution=today`);
+        const first = ((r && r.values) || []).find(x => typeof x.v === 'number');
+        if (first){ base = first.v; break; }
+      }catch(e){}
+    }
+  }
+  if (base == null){
+    try{ const s = JSON.parse(localStorage.getItem('base:'+key) || 'null'); if (s && s.date === today){ base = s.base; since = s.since; } }catch(e){}
+  }
+  if (base == null){ base = v(d,cap); since = Date.now(); }
+  try{ localStorage.setItem('base:'+key, JSON.stringify({date:today, base, since})); }catch(e){}
+  TD[key] = {date:today, base, since};
+}
+function delta(d, cap){
+  const t = TD[d.id+':'+cap], now = v(d,cap);
+  if (!t || typeof now !== 'number' || typeof t.base !== 'number') return null;
+  return {val: Math.max(0, now - t.base), since: t.since};
+}
+const sinceTxt = s => s ? 'sinds ' + new Date(s).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}) : 'vandaag';
+const gridDevs = devs => devs.filter(d => ((d.energyObj && d.energyObj.cumulative) || has(d,'meter_power.imported')) && has(d,'measure_power'));
+const gasDevs = devs => devs.filter(d => has(d,'meter_gas') || has(d,'measure_gas'));
+const elCap = d => has(d,'meter_power.imported') ? 'meter_power.imported' : (has(d,'meter_power') ? 'meter_power' : null);
+async function loadBaselines(){
+  const devs = Object.values(DEVICES), jobs = [];
+  gridDevs(devs).forEach(d => { const c = elCap(d); if (c) jobs.push(baseline(d,c)); if (has(d,'meter_power.exported')) jobs.push(baseline(d,'meter_power.exported')); });
+  gasDevs(devs).forEach(d => { if (has(d,'meter_gas')) jobs.push(baseline(d,'meter_gas')); });
+  await Promise.all(jobs);
+}
+
+/* waarden zoeken op titel (bijv. van de Hybride Verwarming-, prijs- en P1-apps) */
+function capT(d, re){
+  for (const c of (d.capabilities || [])){ const o = d.capabilitiesObj && d.capabilitiesObj[c];
+    if (o && re.test(o.title || '') && o.value != null) return o; }
+  return null;
+}
+function findT(re, devs = Object.values(DEVICES)){ for (const d of devs){ const o = capT(d, re); if (o) return o; } return null; }
+const hybridDev = () => Object.values(DEVICES).find(d => capT(d, /warmteprijs/i));
+
+/* ---------- tarieven ---------- */
+const GAS_KWH = 9.77;  // kWh warmte-inhoud per m³ aardgas (bovenwaarde)
+const PRICE = {stroom:null, gas:null, src:'', next:null};
+async function ezPrice(type){  // EnergyZero marktprijs incl. btw (1 = stroom per uur, 3 = gas per dag)
+  const d0 = new Date(); d0.setHours(0,0,0,0);
+  const d1 = new Date(d0.getTime() + 86400000 - 1);
+  const u = `https://api.energyzero.nl/v1/energyprices?fromDate=${d0.toISOString()}&tillDate=${d1.toISOString()}&interval=4&usageType=${type}&inclBtw=true`;
+  const r = await (await fetch(u)).json();
+  const list = (r.Prices || []).map(x => ({t: new Date(x.readingDate).getTime(), p: x.price})).sort((a,b) => a.t - b.t);
+  if (!list.length) throw new Error('geen prijzen');
+  const now = Date.now();
+  const cur = list.filter(x => x.t <= now).pop() || list[0];
+  return {cur: cur.p, list};
+}
+async function loadPrices(){
+  if (CFG.demo){
+    const h = new Date().getHours();
+    PRICE.stroom = 0.085 + 0.06*Math.sin((h-6)/24*2*Math.PI) + CFG.ebStroom + CFG.opslagStroom;
+    PRICE.gas = 0.52 + CFG.ebGas + CFG.opslagGas; PRICE.src = 'dynamisch'; return;
+  }
+  PRICE.src = (CFG.stroomprijs != null && CFG.gasprijs != null) ? 'vast' : 'dynamisch';
+  if (CFG.stroomprijs != null) PRICE.stroom = CFG.stroomprijs;
+  else try { const e = await ezPrice(1); PRICE.stroom = e.cur + CFG.ebStroom + CFG.opslagStroom; } catch(e){ PRICE.stroom = null; }
+  if (CFG.gasprijs != null) PRICE.gas = CFG.gasprijs;
+  else try { const g = await ezPrice(3); PRICE.gas = g.cur + CFG.ebGas + CFG.opslagGas; } catch(e){ PRICE.gas = null; }
+}
+const eur = (x, d=3) => '€' + new Intl.NumberFormat('nl-NL',{minimumFractionDigits:d, maximumFractionDigits:d}).format(x);
+const ct = x => new Intl.NumberFormat('nl-NL',{maximumFractionDigits:1, minimumFractionDigits:1}).format(x*100) + ' ct';
+function homeyPrices(){
+  const now = findT(/^prijs nu$/i);
+  if (now && typeof now.value === 'number' && CFG.stroomprijs == null){ PRICE.stroom = now.value; PRICE.stroomSrc = 'Homey'; }
+  const ch = findT(/goedkoopste uur komende/i);
+  PRICE.cheapHour = ch && typeof ch.value === 'number' ? ch.value : null;
+  const chp = findT(/goedkoopste prijs komende/i);
+  PRICE.cheapPrice = chp && typeof chp.value === 'number' ? chp.value : null;
+}
+function cheapest(hasHeatpump){
+  const h = hybridDev();
+  if (h){
+    const el = capT(h, /warmteprijs (airco|warmtepomp|stroom|elektr)/i), gas = capT(h, /warmteprijs gas/i), cop = capT(h, /cop/i);
+    if (el && gas) return {elHeat: el.value/100, gasHeat: gas.value/100, cop: cop ? cop.value : null,
+      best: el.value < gas.value ? 'el' : 'gas', label: /airco/i.test(el.title) ? 'airco' : 'warmtepomp', fromHomey: true};
+  }
+  if (PRICE.stroom == null || PRICE.gas == null) return null;
+  const cop = CFG.cop ?? (hasHeatpump ? 4 : 1);
+  const gasHeat = PRICE.gas / (GAS_KWH * CFG.rendement);
+  const elHeat = PRICE.stroom / cop;
+  return {gasHeat, elHeat, cop, best: elHeat < gasHeat ? 'el' : 'gas', label: hasHeatpump ? 'warmtepomp' : 'elektrisch'};
+}
+
+/* verwarmingsstatus: gas (cv-ketel) en/of elektrisch (warmtepomp, kachels) */
+const HEAT_RE = /heat|heating|boiler|burner|flame|central|ch_active|cv|verwarm|brand|ketel|vlam/i;
+let HSTATE = {};
+function heating(devs){
+  const pick = CFG.heat.length ? devs.filter(d => CFG.heat.includes(d.name.toLowerCase())) : devs;
+  const thermos = pick.filter(d => has(d,'target_temperature') && has(d,'measure_temperature'));
+  let gasOn = null, elOn = null, elW = 0, gasFlow = null, why = '';
+  pick.forEach(d => {
+    (d.capabilities || []).forEach(c => {
+      const o = d.capabilitiesObj && d.capabilitiesObj[c]; if (!o || typeof o.value !== 'boolean' || c.startsWith('alarm_')) return;
+      if (c === 'onoff' && !['boiler','heater','heatpump'].includes(d.class)) return;
+      if (!(HEAT_RE.test(c) || HEAT_RE.test(o.title || '') || ['boiler','heater','heatpump'].includes(d.class))) return;
+      const electric = d.class === 'heatpump' || d.class === 'heater' || /pump|pomp|elektr|electr/i.test(c + ' ' + (o.title||'') + ' ' + d.name);
+      if (electric) elOn = (elOn || false) || o.value; else gasOn = (gasOn || false) || o.value;
+    });
+    if ((d.class === 'heatpump' || d.class === 'heater') && has(d,'measure_power')){
+      const w = v(d,'measure_power') || 0; elW += w; if (w > 50) elOn = true; else if (elOn == null) elOn = false;
+    }
+  });
+  gasDevs(devs).forEach(d => { if (has(d,'measure_gas')) gasFlow = (gasFlow || 0) + (v(d,'measure_gas') || 0); });
+  const hy = hybridDev(), hst = hy && capT(hy, /status/i);
+  let hyTxt = null;
+  if (hst && typeof hst.value === 'string'){
+    hyTxt = hst.value;
+    const active = !/uit|inactief|rust|idle|off/i.test(hst.value) || /actief/i.test(hst.value);
+    gasOn = active && /gas|ketel|cv/i.test(hst.value);
+    elOn = active && /airco|warmtepomp|elektr|stroom/i.test(hst.value);
+  }
+  const modeOff = thermos.length && thermos.every(d => v(d,'thermostat_mode') === 'off');
+  const demand = thermos.some(d => v(d,'target_temperature') > v(d,'measure_temperature') + 0.3);
+  if (gasOn == null && gasFlow != null && gasFlow > 0.05) { gasOn = true; why = 'gasverbruik'; }
+  const t = thermos[0];
+  let state, cls = '';
+  if (modeOff) state = 'Verwarming uit';
+  else if (hyTxt && (gasOn || elOn)) { state = hyTxt.replace(/^actief\s*·\s*/i, 'Verwarmt · '); cls = 'on'; }
+  else if (hyTxt) state = hyTxt;
+  else if (gasOn && elOn) { state = 'Verwarmt · gas + elektrisch'; cls = 'on'; }
+  else if (gasOn) { state = 'CV brandt · gas'; cls = 'on'; }
+  else if (elOn) { state = 'Verwarmt · elektrisch'; cls = 'on'; }
+  else if (gasOn === false || elOn === false) state = demand ? 'Vraagt warmte · ketel uit' : 'Verwarming in rust';
+  else if (thermos.length) { state = demand ? 'Vraagt warmte' : 'Op temperatuur'; cls = demand ? 'on' : ''; }
+  else return '';
+  const temps = t ? `${nf1.format(v(t,'measure_temperature'))}°<small style="font-size:14px;color:var(--muted)"> → ${nf1.format(v(t,'target_temperature'))}°</small>` : '';
+  const sub = [state, elW > 50 ? watt(elW).replace(/<\/?small>/g,'') : ''].filter(Boolean).join(' · ');
+  HSTATE = {gasOn, elOn, hp: devs.some(d => d.class === 'heatpump'), elName: /airco/i.test(JSON.stringify(hy ? Object.values(hy.capabilitiesObj).map(o=>o.title) : '')) ? 'airco' : null};
+  return `<div class="etile heat ${cls}">${svg('flame')}<div><div class="v">${temps || (cls ? 'Aan' : 'Uit')}</div><div class="l">${sub}</div></div></div>`;
+}
+
+function tariffBar(){
+  const c = cheapest(HSTATE.hp);
+  homeyPrices();
+  if (PRICE.stroom == null && PRICE.gas == null && !hybridDev()) return '';
+  const cell = (l, v, cls='') => `<div class="tc ${cls}"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+  let html = '';
+  if (c){
+    const elName = c.fromHomey ? (c.label === 'airco' ? 'Airco' : 'Warmtepomp') : (HSTATE.hp ? 'Warmtepomp' : 'Elektrisch');
+    const name = c.best === 'gas' ? 'Gas (cv-ketel)' : elName;
+    const src = HSTATE.gasOn && !HSTATE.elOn ? 'gas' : (HSTATE.elOn && !HSTATE.gasOn ? 'el' : null);
+    const warn = src && src !== c.best;
+    html += cell('Goedkoopst verwarmen nu', name + (warn ? ' <small class="warn">· nu niet in gebruik</small>' : ''), 'best');
+    html += cell(`Warmte ${elName.toLowerCase()}${c.cop != null ? ` <small>COP ${nf1.format(c.cop)}</small>` : ''}`, ct(c.elHeat) + '<small>/kWh</small>', c.best==='el'?'win':'');
+    html += cell(`Warmte cv-ketel${c.fromHomey ? '' : ` <small>${Math.round(CFG.rendement*100)}%</small>`}`, ct(c.gasHeat) + '<small>/kWh</small>', c.best==='gas'?'win':'');
+  }
+  const ch = PRICE.cheapHour != null ? ` · goedkoopst ${String(PRICE.cheapHour).padStart(2,'0')}:00${PRICE.cheapPrice != null ? ' (' + eur(PRICE.cheapPrice,2) + ')' : ''}` : '';
+  html += cell(`Stroom nu${ch}`, PRICE.stroom != null ? eur(PRICE.stroom) + '<small>/kWh</small>' : '–', ch ? 'wide' : '');
+  html += cell(`Gastarief <small>${PRICE.src}</small>`, PRICE.gas != null ? eur(PRICE.gas) + '<small>/m³</small>' : '–');
+  return html;
+}
+
+function energy(devs){
+  const out = [heating(devs)];
+  const grid = gridDevs(devs);
+  const solar = devs.filter(d => d.class === 'solarpanel' && has(d,'measure_power'));
+  const batt = devs.filter(d => (d.class === 'battery' || d.class === 'homebattery'));
+  if (grid.length){
+    const w = grid.reduce((s,d) => s + (v(d,'measure_power')||0), 0);
+    let kwh = 0, exp = 0, since = null;
+    grid.forEach(d => { const c = elCap(d); const x = c && delta(d,c); if (x){ kwh += x.val; since = since || x.since; }
+      const e = has(d,'meter_power.exported') && delta(d,'meter_power.exported'); if (e) exp += e.val; });
+    const dv = findT(/^(dag ?verbruik|kwh deze dag)$/i);
+    if (dv && typeof dv.value === 'number'){ kwh = dv.value; since = null; }
+    const lbl = (exp > 0.05 && w < 0 ? `Terug ${sinceTxt(since)}: ${nf1.format(exp)} kWh` : `Stroom ${sinceTxt(since)}`);
+    out.push(`<div class="etile" style="color:var(--cool)">${svg('bolt')}<div><div class="v" style="color:${w<0?'var(--good)':'var(--text)'}">${w<0?'−':''}${watt(Math.abs(w))} <small>${nf1.format(kwh)} kWh</small></div><div class="l">${lbl}</div></div></div>`);
+  }
+  const gas = gasDevs(devs);
+  if (gas.length){
+    let m3 = 0, since = null, flow = null, stand = null;
+    gas.forEach(d => { const x = has(d,'meter_gas') && delta(d,'meter_gas'); if (x){ m3 += x.val; since = since || x.since; }
+      if (has(d,'measure_gas')) flow = (flow || 0) + (v(d,'measure_gas') || 0); if (has(d,'meter_gas')) stand = v(d,'meter_gas'); });
+    const sub = (flow != null ? `Gas ${sinceTxt(since)} · ${new Intl.NumberFormat('nl-NL',{maximumFractionDigits:2}).format(flow)}/u` : `Gas ${sinceTxt(since)} · stand ${nf0.format(stand||0)} m³`);
+    out.push(`<div class="etile" style="color:var(--on)">${svg('flame')}<div><div class="v" style="color:var(--text)">${new Intl.NumberFormat('nl-NL',{maximumFractionDigits:2,minimumFractionDigits:2}).format(m3)}<small> m³</small></div><div class="l">${sub}</div></div></div>`);
+  }
+  if (solar.length){
+    const w = solar.reduce((s,d) => s + Math.abs(v(d,'measure_power')||0), 0);
+    out.push(`<div class="etile" style="color:var(--sun)">${svg('sun')}<div><div class="v" style="color:var(--text)">${watt(w)}</div><div class="l">Zonnepanelen</div></div></div>`);
+  }
+  batt.forEach(d => {
+    const soc = v(d,'measure_battery'), w = v(d,'measure_power');
+    const lbl = w == null ? 'Thuisbatterij' : (w > 20 ? 'Batterij laadt' : w < -20 ? 'Batterij ontlaadt' : 'Batterij stand-by');
+    out.push(`<div class="etile" style="color:var(--good)">${svg('battery')}<div><div class="v" style="color:var(--text)">${soc!=null?nf0.format(soc)+'<small style="font-size:14px;color:var(--muted)">%</small>':''} ${w!=null?`<small style="font-size:14px;color:var(--muted)">${watt(Math.abs(w)).replace(/<\/?small>/g,'')}</small>`:''}</div><div class="l">${lbl}</div></div></div>`);
+  });
+  return out.join('');
+}
+
+/* ---------- renderen ---------- */
+function zoneName(id){
+  if (!ZONES[id]) return 'Overig';
+  const path = []; let z = id, guard = 0;
+  while (z && ZONES[z] && guard++ < 10){ path.unshift(z); z = ZONES[z].parent; }
+  const pick = path[Math.min(2, path.length - 1)];
+  return ZONES[pick].name;
+}
+function render(){
+  const devs = Object.values(DEVICES).filter(d => !CFG.exclude.includes((d.name||'').toLowerCase()));
+  $('#energy').innerHTML = energy(devs);
+  $('#tariff').innerHTML = tariffBar();
+  const groups = {};
+  const inStrip = d => (d.energyObj && d.energyObj.cumulative) || has(d,'meter_power.imported') || ['solarpanel','battery','homebattery'].includes(d.class);
+  devs.forEach(d => { if (inStrip(d)) return; const t = tile(d); if (!t) return; const z = zoneName(d.zone); (groups[z] = groups[z] || []).push([d, t]); });
+  let names = Object.keys(groups);
+  if (CFG.zones.length){
+    const want = CFG.zones.map(s => s.toLowerCase());
+    names = names.filter(n => want.includes(n.toLowerCase())).sort((a,b) => want.indexOf(a.toLowerCase()) - want.indexOf(b.toLowerCase()));
+  } else names.sort((a,b) => a.localeCompare(b,'nl'));
+  $('#zinner').innerHTML = names.map(n => {
+    const items = groups[n].sort((a,b) => (a[0].class === 'light' ? 0 : 1) - (b[0].class === 'light' ? 0 : 1) || a[0].name.localeCompare(b[0].name,'nl'));
+    return `<section class="zone"><h2>${esc(n)}</h2><div class="tiles">${items.map(x => x[1]).join('')}</div></section>`;
+  }).join('') || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';
+  $('#status').textContent = 'bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+/* bediening (werkt op tablet/pc; op een Nest Hub via casten is aanraken meestal niet mogelijk) */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const t = btn.closest('.tile'); if (!t) return;
+  const d = DEVICES[t.dataset.id]; if (!d) return;
+  if (btn.dataset.act === 'toggle') setCap(d.id, 'onoff', !(v(d,'onoff') === true));
+  if (btn.dataset.act === 'tt'){ e.stopPropagation(); setCap(d.id, 'target_temperature', Math.round(((v(d,'target_temperature')||20) + parseFloat(btn.dataset.d))*2)/2); }
+});
+
+/* automatisch "doorbladeren" als niet alles op het scherm past (casten = geen scrollen) */
+let page = 0;
+function pager(){
+  const box = $('#zones'), inner = $('#zinner');
+  const pages = Math.ceil(inner.scrollHeight / box.clientHeight);
+  page = pages > 1 ? (page + 1) % pages : 0;
+  inner.style.transform = `translateY(-${page * (box.clientHeight - 12)}px)`;
+}
+
+function showError(msg){ const el = $('#error'); el.textContent = msg; el.style.display = 'block'; clearTimeout(showError.t); showError.t = setTimeout(() => el.style.display = 'none', 15000); }
+
+async function loop(){
+  try { await loadHomey(); render(); $('#error').style.display = 'none'; }
+  catch(e){
+    showError(`Kan Homey niet bereiken (${e.message}). Controleer adres en API-sleutel. ` +
+      (CFG.homey.includes('homeylocal') ? 'Werkt lokaal niet? Probeer je cloud-ID als adres.' : ''));
+  }
+  setTimeout(loop, CFG.refresh * 1000);
+}
+
+/* ---------- demo-data ---------- */
+function demoInit(){
+  ZONES = {z1:{name:'Woonkamer'},z2:{name:'Keuken'},z3:{name:'Slaapkamer'},z4:{name:'Tuin'},z5:{name:'Meterkast'}};
+  const mk = (id,name,zone,cls,caps,extra={}) => ({id,name,zone,class:cls,available:true,capabilities:Object.keys(caps),
+    capabilitiesObj:Object.fromEntries(Object.entries(caps).map(([k,val]) => [k,{value:val}])),...extra});
+  [
+    mk('a','Plafondlamp','z1','light',{onoff:true,dim:.7}),
+    mk('b','Leeslamp','z1','light',{onoff:false,dim:.4}),
+    mk('c','Thermostaat','z1','thermostat',{target_temperature:20.5,measure_temperature:19.8}),
+    mk('d','TV','z1','socket',{onoff:true,measure_power:96}),
+    mk('e','Raam woonkamer','z1','sensor',{alarm_contact:false,measure_battery:80}),
+    mk('f','Spots','z2','light',{onoff:true,dim:1}),
+    mk('g','Vaatwasser','z2','socket',{onoff:true,measure_power:1840}),
+    mk('h','Bewegingssensor','z2','sensor',{alarm_motion:false,measure_temperature:21.2,measure_battery:9}),
+    mk('i','Nachtlamp','z3','light',{onoff:false}),
+    mk('j','Klimaat','z3','sensor',{measure_temperature:18.4,measure_humidity:57}),
+    mk('k','Tuinverlichting','z4','light',{onoff:false}),
+    mk('l','Achterdeur','z4','sensor',{alarm_contact:true}),
+    mk('m','Weerstation','z4','sensor',{measure_temperature:6.3,measure_humidity:88}),
+    mk('n','P1','z5','sensor',{measure_power:640,'meter_power.imported':12345.2,'meter_power.exported':3010.4,meter_gas:4521.37,measure_gas:0.42},{energyObj:{cumulative:true}}),
+    mk('s','Hybride Verwarming','z5','other',{hv_status:'Actief · Gas',hv_air:25.32,hv_gas:18.65,hv_cop:2.29}),
+    mk('w','NL_Netherlands','z5','sensor',{pr_now:0.5935,pr_ch:2,pr_chp:0.409}),
+    mk('r','Rolluik','z3','windowcoverings',{windowcoverings_set:0}),
+    mk('o','Omvormer','z5','solarpanel',{measure_power:-410}),
+    mk('p','Thuisbatterij','z5','battery',{measure_battery:64,measure_power:-850})
+  ].forEach(d => DEVICES[d.id] = d);
+  const T = (id,c,t) => DEVICES[id].capabilitiesObj[c].title = t;
+  T('s','hv_status','Status en prijsadvies'); T('s','hv_air','Warmteprijs airco'); T('s','hv_gas','Warmteprijs gas'); T('s','hv_cop','Proef-COP');
+  T('w','pr_now','Prijs nu'); T('w','pr_ch','Goedkoopste uur komende 8U'); T('w','pr_chp','Goedkoopste prijs komende 8U');
+  const t = todayKey();
+  TD['n:meter_power.imported'] = {date:t, base:12345.2-7.4};
+  TD['n:meter_power.exported'] = {date:t, base:3010.4-1.9};
+  TD['n:meter_gas'] = {date:t, base:4521.37-3.86};
+}
+function demoStep(){
+  const j = (id,c,f) => { const o = DEVICES[id].capabilitiesObj[c]; o.value = f(o.value); };
+  j('n','measure_power', w => Math.round(w + (Math.random()-.5)*120));
+  j('o','measure_power', w => Math.min(0, Math.round(w + (Math.random()-.5)*60)));
+  if (Math.random() < .25) j('h','alarm_motion', m => !m);
+}
+
+/* ---------- setup ---------- */
+function setup(){
+  $('#setup').style.display = 'block';
+  $('#b_demo').onclick = () => { location.hash = 'demo'; location.reload(); };
+  $('#b_make').onclick = () => {
+    const p = new URLSearchParams();
+    p.set('homey', $('#f_homey').value.trim()); p.set('key', $('#f_key').value.trim());
+    ['zones','exclude','heat','stroomprijs','gasprijs','cop','lat','lon','night'].forEach(k => { const x = $('#f_'+k).value.trim(); if (x) p.set(k, x); });
+    const url = location.href.split('#')[0] + '#' + p.toString();
+    const out = $('#out'); out.style.display = 'block';
+    out.innerHTML = `<b>Jouw dashboard-link</b> (gebruik deze om te casten):<br><br>${esc(url)}<br><br><a href="${esc(url)}" style="color:var(--on)" onclick="setTimeout(()=>location.reload(),50)">Open dashboard →</a>`;
+  };
+}
+
+/* ---------- start ---------- */
+if (!CFG.demo && (!CFG.homey || !CFG.key)) { setup(); return; }
+$('#app').style.display = 'flex';
+if (CFG.demo) demoInit();
+tick(); setInterval(tick, 1000);
+loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
+loadPrices().then(render); setInterval(() => loadPrices().then(render), 10 * 60 * 1000);
+loop();
+setInterval(pager, 12000);
+})();
+</script>
+</body>
+</html>

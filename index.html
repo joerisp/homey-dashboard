@@ -338,6 +338,17 @@ function tile(d){
     val = `${m != null ? nf1.format(m)+'°' : '–'}<small>doel ${t != null ? nf1.format(t)+'°' : '–'}</small>`;
     extra = `<div class="thermo"><button data-act="tt" data-d="-0.5">−</button><button data-act="tt" data-d="0.5">+</button></div>`;
     if (m != null && t != null && t > m + 0.3) cls = 'on';
+  } else if (has(d,'bshc_string.progress') || has(d,'washer_status') || has(d,'samsung_washer_current_job_state')){
+    /* vaatwasser / wasmachine / droger: programma-status in plaats van aan/uit */
+    const prog = parseInt(v(d,'bshc_string.progress') ?? v(d,'samsung_washer_progress_percentage'), 10);
+    const rem = v(d,'bshc_string.remaining_time') ?? v(d,'samsung_washer_progress_remaining_time');
+    const st = String(v(d,'washer_status') ?? v(d,'samsung_washer_current_job_state') ?? '').toLowerCase();
+    const remOk = rem && !/^0?0:00$/.test(rem);
+    const running = /run|wash|rinse|spin|dry|cool/.test(st) || (has(d,'bshc_string.progress') && prog > 0 && prog < 100 && remOk) || (v(d,'onoff') === true && remOk);
+    const door = v(d,'alarm_contact') === true;
+    if (running){ cls = 'on'; val = remOk ? `nog ${esc(rem)}<small>${isNaN(prog) ? '' : prog + '%'}</small>` : `Bezig${isNaN(prog) ? '' : `<small>${prog}%</small>`}`; extra = isNaN(prog) ? '' : `<div class="bar" style="width:${prog}%"></div>`; }
+    else if (prog === 100 && has(d,'bshc_string.progress')) val = `Klaar${door ? '<small>deur open</small>' : ''}`;
+    else val = door ? 'Deur open' : (v(d,'onoff') === true ? 'Aan' : 'Uit');
   } else if (has(d,'onoff')){
     const on = v(d,'onoff') === true;
     cls = on ? 'on' : ''; act = 'toggle';

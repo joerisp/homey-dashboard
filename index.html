@@ -338,7 +338,7 @@ function tile(d){
     val = `${m != null ? nf1.format(m)+'°' : '–'}<small>doel ${t != null ? nf1.format(t)+'°' : '–'}</small>`;
     extra = `<div class="thermo"><button data-act="tt" data-d="-0.5">−</button><button data-act="tt" data-d="0.5">+</button></div>`;
     if (m != null && t != null && t > m + 0.3) cls = 'on';
-  } else if (has(d,'bshc_string.progress') || has(d,'washer_status') || has(d,'samsung_washer_current_job_state')){
+  } else if (has(d,'bshc_string.progress') || has(d,'washer_status')){
     /* vaatwasser / wasmachine / droger: programma-status in plaats van aan/uit */
     const prog = parseInt(v(d,'bshc_string.progress') ?? v(d,'samsung_washer_progress_percentage'), 10);
     const rem = v(d,'bshc_string.remaining_time') ?? v(d,'samsung_washer_progress_remaining_time');

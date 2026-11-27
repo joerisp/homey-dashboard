@@ -456,7 +456,7 @@ function heating(devs){
   let hyTxt = null;
   if (hst && typeof hst.value === 'string'){
     hyTxt = hst.value;
-    const active = !/uit|inactief|rust|idle|off/i.test(hst.value) || /actief/i.test(hst.value);
+    const active = !/inactief|\buit\b|rust|idle|off/i.test(hst.value);
     gasOn = active && /gas|ketel|cv/i.test(hst.value);
     elOn = active && /airco|warmtepomp|elektr|stroom/i.test(hst.value);
   }

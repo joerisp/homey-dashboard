@@ -704,6 +704,15 @@ loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
 loadPrices().then(render); setInterval(() => loadPrices().then(render), 10 * 60 * 1000);
 loop();
 // geen automatisch doorbladeren
+/* nieuwe versie online? dan zelf herladen, langs de cache van de Hub heen */
+async function checkVersion(){
+  try{
+    const t = await (await fetch(location.pathname + '?check=' + Date.now(), {cache:'no-store'})).text();
+    const mine = document.querySelector('script').textContent;
+    if (t.includes('<script>') && !t.includes(mine)) location.replace(location.pathname + '?v=' + Date.now() + location.hash);
+  }catch(e){}
+}
+setTimeout(checkVersion, 20000); setInterval(checkVersion, 3 * 60 * 1000);
 })();
 </script>
 </body>

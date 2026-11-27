@@ -554,7 +554,7 @@ function zoneName(id){
 const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda', 'Gang', 'Garderobe', 'Tuin', 'Voorraadkast', 'Zolder', 'Begane grond']).map(x => x.toLowerCase());  // zones die niet getoond worden
 const NO_LIGHTS = (P.has('geenlampen') ? list(P.get('geenlampen')) : ['Keuken', 'Woonkamer']).map(x => x.toLowerCase());  // zones zonder lampen
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur
-const TEMP_ZONES = (P.has('temps') ? list(P.get('temps')) : ['Keuken', 'Woonkamer', 'Slaapkamer']);  // zones in het temperatuurblok
+const TEMP_ZONES = (P.has('temps') ? list(P.get('temps')) : ['Keuken', 'Woonkamer', 'Slaapkamer', 'Badkamer']);  // zones in het temperatuurblok
 function tempsCard(devs){
   const rows = [];
   TEMP_ZONES.forEach(zn => devs.filter(d => zoneName(d.zone).toLowerCase() === zn.toLowerCase() && has(d,'measure_temperature') && d.available !== false && typeof v(d,'measure_temperature') === 'number')

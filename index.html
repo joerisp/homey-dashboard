@@ -589,7 +589,7 @@ const TEMP_ZONES = (P.has('temps') ? list(P.get('temps')) : ['Keuken', 'Woonkame
 function tempsCard(devs){
   const rows = [];
   TEMP_ZONES.forEach(zn => devs.filter(d => zoneName(d.zone).toLowerCase() === zn.toLowerCase() && has(d,'measure_temperature') && d.available !== false && typeof v(d,'measure_temperature') === 'number')
-    .forEach(d => { const tt = v(d,'target_temperature'); rows.push(`<div class="trow"><span class="tnm">${esc(d.name.trim())}<small class="tzn">${esc(zn)}</small></span><span class="tvl">${nf1.format(v(d,'measure_temperature'))}°</span><span class="ttg">${typeof tt === 'number' ? 'doel ' + nf1.format(tt) + '°' : ''}</span></div>`); }));
+    .forEach(d => { const tt = v(d,'target_temperature'); const dn = d.name.trim(); rows.push(`<div class="trow"><span class="tnm">${esc(zn)}${dn.toLowerCase() !== zn.toLowerCase() ? `<small class="tzn">${esc(dn)}</small>` : ''}</span><span class="tvl">${nf1.format(v(d,'measure_temperature'))}°</span><span class="ttg">${typeof tt === 'number' ? 'doel ' + nf1.format(tt) + '°' : ''}</span></div>`); }));
   return rows.length ? `<section class="zone temps"><h2>Temperaturen</h2>${rows.join('')}</section>` : '';
 }
 function render(){

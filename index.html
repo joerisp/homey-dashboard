@@ -551,7 +551,7 @@ function zoneName(id){
   const pick = path[Math.min(2, path.length - 1)];
   return ZONES[pick].name;
 }
-const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda', 'Gang', 'Garderobe', 'Tuin', 'Voorraadkast', 'Zolder', 'Begane grond', 'Badkamer', 'Woonkamer']).map(x => x.toLowerCase());  // zones die niet getoond worden
+const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda', 'Gang', 'Garderobe', 'Tuin', 'Voorraadkast', 'Zolder', 'Begane grond', 'Badkamer', 'Woonkamer', 'Energie']).map(x => x.toLowerCase());  // zones die niet getoond worden
 const HIDE_TILES = (P.has('geentegel') ? list(P.get('geentegel')) : ['Thermostaat', 'Slaapkamer']).map(x => x.toLowerCase());  // alleen uit de kamerblokken, blijft in Temperaturen
 const NO_LIGHTS = (P.has('geenlampen') ? list(P.get('geenlampen')) : ['Keuken', 'Woonkamer']).map(x => x.toLowerCase());  // zones zonder lampen
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur

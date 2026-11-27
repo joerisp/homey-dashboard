@@ -585,10 +585,13 @@ const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Ver
 const HIDE_TILES = (P.has('geentegel') ? list(P.get('geentegel')) : ['Thermostaat', 'Slaapkamer']).map(x => x.toLowerCase());  // alleen uit de kamerblokken, blijft in Temperaturen
 const NO_LIGHTS = (P.has('geenlampen') ? list(P.get('geenlampen')) : ['Keuken', 'Woonkamer']).map(x => x.toLowerCase());  // zones zonder lampen
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur
-const TEMP_ZONES = (P.has('temps') ? list(P.get('temps')) : ['Keuken', 'Woonkamer', 'Slaapkamer', 'Badkamer']);  // zones in het temperatuurblok
+const TEMP_ZONES = (P.has('temps') ? list(P.get('temps')) : ['Woonkamer', 'Slaapkamer', 'Badkamer']);  // regels in het temperatuurblok
+const TEMP_ZONE_OF = {'thermostaat': 'Woonkamer'};   // apparaat -> kamer waar het eigenlijk meet
+const TEMP_SKIP = ['huiskamer'];                      // airco woonkamer: meet niet goed als hij uit staat
 function tempsCard(devs){
   const rows = [];
-  TEMP_ZONES.forEach(zn => devs.filter(d => zoneName(d.zone).toLowerCase() === zn.toLowerCase() && has(d,'measure_temperature') && d.available !== false && typeof v(d,'measure_temperature') === 'number')
+  const tz = d => TEMP_ZONE_OF[d.name.trim().toLowerCase()] || zoneName(d.zone);
+  TEMP_ZONES.forEach(zn => devs.filter(d => tz(d).toLowerCase() === zn.toLowerCase() && !TEMP_SKIP.includes(d.name.trim().toLowerCase()) && has(d,'measure_temperature') && d.available !== false && typeof v(d,'measure_temperature') === 'number')
     .forEach(d => { const tt = v(d,'target_temperature'); const dn = d.name.trim(); rows.push(`<div class="trow"><span class="tnm">${esc(zn)}${dn.toLowerCase() !== zn.toLowerCase() ? `<small class="tzn">${esc(dn)}</small>` : ''}</span><span class="tvl">${nf1.format(v(d,'measure_temperature'))}°</span><span class="ttg">${typeof tt === 'number' ? 'doel ' + nf1.format(tt) + '°' : ''}</span></div>`); }));
   return rows.length ? `<section class="zone temps"><h2>Temperaturen</h2>${rows.join('')}</section>` : '';
 }

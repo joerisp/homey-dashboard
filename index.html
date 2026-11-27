@@ -263,7 +263,7 @@ function applyTheme(){
   const mode = (P.get('thema') || 'auto').toLowerCase();
   let light = false;
   if (mode === 'licht' || mode === 'light') light = true;
-  else if (mode === 'auto' && SUN){ const n = Date.now(); light = n >= SUN.rise && n < SUN.set; }
+  else if (mode === 'auto'){ if (SUN){ const n = Date.now(); light = n >= SUN.rise && n < SUN.set; } else { const h = new Date().getHours(); light = h >= 8 && h < 17; } }
   document.body.classList.toggle('light', light);
 }
 
@@ -280,7 +280,7 @@ async function loadWeather(){
       return `<div class="wday">${n}${wsvg(w.daily.weather_code[i+1])}<b>${Math.round(w.daily.temperature_2m_max[i+1])}°</b> ${Math.round(w.daily.temperature_2m_min[i+1])}°</div>`;
     }).join('');
     $('#weather').innerHTML = `<div class="wnow">${wsvg(w.current.weather_code)}${Math.round(w.current.temperature_2m)}°</div><div class="wdays">${days}</div>`;
-  }catch(e){ /* weer is optioneel */ }
+  }catch(e){ setTimeout(loadWeather, 60000); /* opnieuw proberen */ }
 }
 
 /* ---------- Homey API ---------- */

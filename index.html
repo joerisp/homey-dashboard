@@ -91,6 +91,14 @@
   .temps .tvl{font-size:32px;font-weight:500;letter-spacing:-.5px}
   .temps .ttg{display:none}
 
+  /* Stroomprijs-grafiek */
+  .pricechart svg{width:100%;height:118px;display:block;margin-top:4px}
+  .pc-head{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;color:var(--muted);margin:0 4px}
+  .pc-head b{color:var(--text);font-size:21px;font-weight:500}
+  .pc-head b.g{color:var(--good)}
+  .pc-axis{position:relative;height:16px;font-size:12px;color:var(--dim);margin:3px 0 4px}
+  .pc-axis span{position:absolute;top:0}
+
   #status{position:fixed;right:16px;bottom:8px;font-size:12px;color:var(--dim)}
   #error{position:fixed;left:18px;right:18px;bottom:14px;background:#3a1f22;color:#ffd6d6;border-radius:12px;padding:10px 14px;font-size:14px;display:none}
 
@@ -426,13 +434,48 @@ async function ezPrice(type){  // EnergyZero marktprijs incl. btw (1 = stroom pe
   const cur = list.filter(x => x.t <= now).pop() || list[0];
   return {cur: cur.p, list};
 }
+async function loadHourly(){
+  const d0 = new Date(); d0.setHours(0,0,0,0);
+  const d1 = new Date(d0.getTime() + 2*86400000 - 1);
+  try{
+    const r = await (await fetch(`https://api.energyzero.nl/v1/energyprices?fromDate=${d0.toISOString()}&tillDate=${d1.toISOString()}&interval=4&usageType=1&inclBtw=true`)).json();
+    const list = (r.Prices || []).map(x => ({t: new Date(x.readingDate).getTime(), p: x.price})).sort((a,b) => a.t - b.t);
+    if (list.length) PRICE.hours = list;
+  }catch(e){ setTimeout(() => loadHourly().then(render), 60000); }
+}
+function priceCard(){
+  const hrs = PRICE.hours; if (!hrs || !hrs.length) return '';
+  const now = Date.now(), cur = hrs.filter(h => h.t <= now).pop() || hrs[0];
+  const off = (PRICE.stroomSrc === 'Homey' && PRICE.stroom != null) ? PRICE.stroom - cur.p : CFG.ebStroom + CFG.opslagStroom;
+  const vals = hrs.map(h => ({t: h.t, p: h.p + off}));
+  const max = Math.max(...vals.map(x => x.p)), lo = Math.min(...vals.map(x => x.p)), min = lo - (max - lo) * 0.35;
+  const ahead = vals.filter(x => x.t >= cur.t), cheap = ahead.slice().sort((a,b) => a.p - b.p).slice(0, 3).map(x => x.t);
+  const low = ahead.reduce((a,b) => b.p < a.p ? b : a, ahead[0]);
+  const W = 300, Hh = 110, n = vals.length, bw = W / n;
+  const bars = vals.map((x, i) => {
+    const h = Math.max(2, (x.p - min) / (max - min || 1) * (Hh - 6)), y = Hh - h;
+    const isCur = x.t === cur.t, past = x.t < cur.t, isCheap = cheap.includes(x.t);
+    const fill = isCur ? 'var(--text)' : isCheap ? 'var(--good)' : past ? 'var(--dim)' : 'var(--cool)';
+    return `<rect x="${(i*bw + bw*0.15).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${fill}" opacity="${past && !isCur ? 0.35 : 0.95}"/>`;
+  }).join('');
+  const split = n > 24 ? `<line x1="${(24*bw).toFixed(1)}" y1="0" x2="${(24*bw).toFixed(1)}" y2="${Hh}" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 3"/>` : '';
+  const hh = t => String(new Date(t).getHours()).padStart(2,'0') + ':00';
+  const axis = vals.map((x, i) => { const hr = new Date(x.t).getHours(); if (hr % 6) return ''; const lab = hr === 0 && i > 0 ? 'morgen' : String(hr).padStart(2,'0'); return `<span style="left:${(i/n*100).toFixed(1)}%">${lab}</span>`; }).join('');
+  return `<section class="zone pricechart"><h2>Stroomprijs</h2>
+    <div class="pc-head"><span>nu <b>${eur(vals.find(x => x.t === cur.t).p, 2)}</b></span><span>laagst <b class="g">${eur(low.p, 2)}</b> om ${hh(low.t)}</span></div>
+    <svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${split}${bars}</svg>
+    <div class="pc-axis">${axis}</div></section>`;
+}
 async function loadPrices(){
   if (CFG.demo){
     const h = new Date().getHours();
     PRICE.stroom = 0.085 + 0.06*Math.sin((h-6)/24*2*Math.PI) + CFG.ebStroom + CFG.opslagStroom;
-    PRICE.gas = 0.52 + CFG.ebGas + CFG.opslagGas; PRICE.src = 'dynamisch'; return;
+    PRICE.gas = 0.52 + CFG.ebGas + CFG.opslagGas; PRICE.src = 'dynamisch';
+    const d0 = new Date(); d0.setHours(0,0,0,0); PRICE.hours = Array.from({length: 36}, (_, i) => ({t: d0.getTime() + i*3600000, p: 0.09 + 0.07*Math.sin(((i%24)-7)/24*2*Math.PI) + 0.03*Math.sin(i)}));
+    return;
   }
   PRICE.src = (CFG.stroomprijs != null && CFG.gasprijs != null) ? 'vast' : 'dynamisch';
+  await loadHourly();
   if (CFG.stroomprijs != null) PRICE.stroom = CFG.stroomprijs;
   else try { const e = await ezPrice(1); PRICE.stroom = e.cur + CFG.ebStroom + CFG.opslagStroom; } catch(e){ setTimeout(() => loadPrices().then(render), 60000); }
   if (CFG.gasprijs != null) PRICE.gas = CFG.gasprijs;
@@ -610,7 +653,7 @@ function render(){
   $('#zinner').innerHTML = tempsCard(devs) + names.map(n => {
     const items = groups[n].sort((a,b) => (a[0].class === 'light' ? 0 : 1) - (b[0].class === 'light' ? 0 : 1) || a[0].name.localeCompare(b[0].name,'nl'));
     return `<section class="zone"><h2>${esc(n)}</h2><div class="tiles">${items.map(x => x[1]).join('')}</div></section>`;
-  }).join('') || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';
+  }).join('') + priceCard() || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';
   $('#status').textContent = 'bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 

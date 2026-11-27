@@ -654,6 +654,7 @@ function render(){
     const items = groups[n].sort((a,b) => (a[0].class === 'light' ? 0 : 1) - (b[0].class === 'light' ? 0 : 1) || a[0].name.localeCompare(b[0].name,'nl'));
     return `<section class="zone"><h2>${esc(n)}</h2><div class="tiles">${items.map(x => x[1]).join('')}</div></section>`;
   }).join('') + priceCard() || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';
+  fitZones();
   $('#status').textContent = 'bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 
@@ -675,6 +676,13 @@ function pager(){
   inner.style.transform = `translateY(-${page * (box.clientHeight - 12)}px)`;
 }
 
+/* alles op één scherm: blokken iets kleiner maken als ze niet passen */
+function fitZones(){
+  const box = $('#zones'), inner = $('#zinner'); if (!box || !inner) return;
+  let z = 1; inner.style.zoom = 1; inner.style.transform = '';
+  while (inner.getBoundingClientRect().height > box.clientHeight - 2 && z > 0.7){ z -= 0.03; inner.style.zoom = z.toFixed(2); }
+}
+window.addEventListener('resize', fitZones);
 function showError(msg){ const el = $('#error'); el.textContent = msg; el.style.display = 'block'; clearTimeout(showError.t); showError.t = setTimeout(() => el.style.display = 'none', 15000); }
 
 async function loop(){

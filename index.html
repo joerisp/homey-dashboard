@@ -434,9 +434,9 @@ async function loadPrices(){
   }
   PRICE.src = (CFG.stroomprijs != null && CFG.gasprijs != null) ? 'vast' : 'dynamisch';
   if (CFG.stroomprijs != null) PRICE.stroom = CFG.stroomprijs;
-  else try { const e = await ezPrice(1); PRICE.stroom = e.cur + CFG.ebStroom + CFG.opslagStroom; } catch(e){ PRICE.stroom = null; }
+  else try { const e = await ezPrice(1); PRICE.stroom = e.cur + CFG.ebStroom + CFG.opslagStroom; } catch(e){ setTimeout(() => loadPrices().then(render), 60000); }
   if (CFG.gasprijs != null) PRICE.gas = CFG.gasprijs;
-  else try { const g = await ezPrice(3); PRICE.gas = g.cur + CFG.ebGas + CFG.opslagGas; } catch(e){ PRICE.gas = null; }
+  else try { const g = await ezPrice(3); PRICE.gas = g.cur + CFG.ebGas + CFG.opslagGas; } catch(e){ setTimeout(() => loadPrices().then(render), 60000); }
 }
 const eur = (x, d=3) => '€' + new Intl.NumberFormat('nl-NL',{minimumFractionDigits:d, maximumFractionDigits:d}).format(x);
 const ct = x => new Intl.NumberFormat('nl-NL',{maximumFractionDigits:1, minimumFractionDigits:1}).format(x*100) + ' ct';

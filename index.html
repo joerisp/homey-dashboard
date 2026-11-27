@@ -552,6 +552,7 @@ function zoneName(id){
   return ZONES[pick].name;
 }
 const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda', 'Gang', 'Garderobe', 'Tuin', 'Voorraadkast', 'Zolder', 'Begane grond', 'Badkamer']).map(x => x.toLowerCase());  // zones die niet getoond worden
+const HIDE_TILES = (P.has('geentegel') ? list(P.get('geentegel')) : ['Thermostaat']).map(x => x.toLowerCase());  // alleen uit de kamerblokken, blijft in Temperaturen
 const NO_LIGHTS = (P.has('geenlampen') ? list(P.get('geenlampen')) : ['Keuken', 'Woonkamer']).map(x => x.toLowerCase());  // zones zonder lampen
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur
 const TEMP_ZONES = (P.has('temps') ? list(P.get('temps')) : ['Keuken', 'Woonkamer', 'Slaapkamer', 'Badkamer']);  // zones in het temperatuurblok
@@ -567,7 +568,7 @@ function render(){
   $('#tariff').innerHTML = tariffBar();
   const groups = {};
   const inStrip = d => (d.energyObj && d.energyObj.cumulative) || has(d,'meter_power.imported') || ['solarpanel','battery','homebattery'].includes(d.class);
-  devs.forEach(d => { if (inStrip(d)) return; const z = zoneName(d.zone); if (HIDE_ZONES.includes(z.toLowerCase())) return; if (NO_LIGHTS.includes(z.toLowerCase()) && d.class === 'light') return; if (TEMP_ONLY.includes(z.toLowerCase()) && !((has(d,'measure_temperature') || has(d,'target_temperature')) && d.available !== false)) return; const tOnly = TEMP_ONLY.includes(z.toLowerCase()) && !has(d,'target_temperature'); const t = tile(tOnly ? {...d, capabilities: d.capabilities.filter(c => /^measure_(temperature|humidity)$/.test(c))} : d); if (!t) return; (groups[z] = groups[z] || []).push([d, t]); });
+  devs.forEach(d => { if (inStrip(d)) return; const z = zoneName(d.zone); if (HIDE_ZONES.includes(z.toLowerCase())) return; if (HIDE_TILES.includes((d.name||'').trim().toLowerCase())) return; if (NO_LIGHTS.includes(z.toLowerCase()) && d.class === 'light') return; if (TEMP_ONLY.includes(z.toLowerCase()) && !((has(d,'measure_temperature') || has(d,'target_temperature')) && d.available !== false)) return; const tOnly = TEMP_ONLY.includes(z.toLowerCase()) && !has(d,'target_temperature'); const t = tile(tOnly ? {...d, capabilities: d.capabilities.filter(c => /^measure_(temperature|humidity)$/.test(c))} : d); if (!t) return; (groups[z] = groups[z] || []).push([d, t]); });
   let names = Object.keys(groups);
   if (CFG.zones.length){
     const want = CFG.zones.map(s => s.toLowerCase());

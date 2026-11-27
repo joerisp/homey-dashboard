@@ -78,6 +78,12 @@
   .tile.off{opacity:.45}
   .tile .bar{position:absolute;left:0;bottom:0;height:3px;border-radius:0 0 0 14px;background:var(--on)}
   .badge{font-size:11px;color:var(--bad)}
+  .temps .trow{display:grid;grid-template-columns:1fr auto 64px;align-items:baseline;gap:8px;padding:7px 6px;border-top:1px solid var(--line)}
+  .temps .trow:first-of-type{border-top:0}
+  .temps .tzn{display:block;color:var(--muted);font-size:11px}
+  .temps .tnm{font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .temps .tvl{font-size:22px;font-weight:500}
+  .temps .ttg{color:var(--muted);font-size:12px;text-align:right}
   .thermo{display:flex;align-items:center;gap:8px}
   .thermo button{background:var(--line);color:var(--text);border:0;border-radius:10px;width:30px;height:30px;font-size:18px;cursor:pointer}
 
@@ -548,6 +554,13 @@ function zoneName(id){
 const HIDE_ZONES = (P.has('verberg') ? list(P.get('verberg')) : ['Kantoor', 'Veranda', 'Gang', 'Garderobe', 'Tuin', 'Voorraadkast', 'Zolder', 'Begane grond']).map(x => x.toLowerCase());  // zones die niet getoond worden
 const NO_LIGHTS = (P.has('geenlampen') ? list(P.get('geenlampen')) : ['Keuken', 'Woonkamer']).map(x => x.toLowerCase());  // zones zonder lampen
 const TEMP_ONLY = (P.has('alleentemp') ? list(P.get('alleentemp')) : ['Badkamer']).map(x => x.toLowerCase());  // zones met alleen temperatuur
+const TEMP_ZONES = (P.has('temps') ? list(P.get('temps')) : ['Keuken', 'Woonkamer', 'Slaapkamer']);  // zones in het temperatuurblok
+function tempsCard(devs){
+  const rows = [];
+  TEMP_ZONES.forEach(zn => devs.filter(d => zoneName(d.zone).toLowerCase() === zn.toLowerCase() && has(d,'measure_temperature') && d.available !== false && typeof v(d,'measure_temperature') === 'number')
+    .forEach(d => { const tt = v(d,'target_temperature'); rows.push(`<div class="trow"><span class="tnm">${esc(d.name.trim())}<small class="tzn">${esc(zn)}</small></span><span class="tvl">${nf1.format(v(d,'measure_temperature'))}°</span><span class="ttg">${typeof tt === 'number' ? 'doel ' + nf1.format(tt) + '°' : ''}</span></div>`); }));
+  return rows.length ? `<section class="zone temps"><h2>Temperaturen</h2>${rows.join('')}</section>` : '';
+}
 function render(){
   const devs = Object.values(DEVICES).filter(d => !CFG.exclude.includes((d.name||'').trim().toLowerCase()));
   $('#energy').innerHTML = energy(devs);
@@ -560,7 +573,7 @@ function render(){
     const want = CFG.zones.map(s => s.toLowerCase());
     names = names.filter(n => want.includes(n.toLowerCase())).sort((a,b) => want.indexOf(a.toLowerCase()) - want.indexOf(b.toLowerCase()));
   } else names.sort((a,b) => a.localeCompare(b,'nl'));
-  $('#zinner').innerHTML = names.map(n => {
+  $('#zinner').innerHTML = tempsCard(devs) + names.map(n => {
     const items = groups[n].sort((a,b) => (a[0].class === 'light' ? 0 : 1) - (b[0].class === 'light' ? 0 : 1) || a[0].name.localeCompare(b[0].name,'nl'));
     return `<section class="zone"><h2>${esc(n)}</h2><div class="tiles">${items.map(x => x[1]).join('')}</div></section>`;
   }).join('') || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';

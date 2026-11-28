@@ -768,6 +768,15 @@ tick(); setInterval(tick, 1000);
 loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
 loadPrices().then(render); setInterval(() => loadPrices().then(render), 10 * 60 * 1000);
 loop();
+/* hartslag: laat Homey weten dat het dashboard op de Hub staat (alleen met &hub=1 in de link) */
+async function heartbeat(){
+  if (CFG.demo || !P.has('hub')) return;
+  try{
+    if (!heartbeat.id){ const vars = await api('/api/manager/logic/variable/'); const f = Object.values(vars || {}).find(x => x.name === 'dashboard_actief'); if (!f) return; heartbeat.id = f.id; }
+    await api('/api/manager/logic/variable/' + heartbeat.id, {method:'PUT', body: JSON.stringify({value: true})});
+  }catch(e){ heartbeat.id = null; }
+}
+heartbeat(); setInterval(heartbeat, 60 * 1000);
 // geen automatisch doorbladeren
 /* nieuwe versie online? dan zelf herladen, langs de cache van de Hub heen */
 async function checkVersion(){

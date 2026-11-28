@@ -681,7 +681,7 @@ function render(){
   $('#zinner').innerHTML = tempsCard(devs) + names.map(n => {
     const items = groups[n].sort((a,b) => (a[0].class === 'light' ? 0 : 1) - (b[0].class === 'light' ? 0 : 1) || a[0].name.localeCompare(b[0].name,'nl'));
     return `<section class="zone"><h2>${esc(n)}</h2><div class="tiles">${items.map(x => x[1]).join('')}</div></section>`;
-  }).join('') + priceCard() + waterCard(devs) || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';
+  }).join('') + waterCard(devs) + priceCard() || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';
   fitZones();
   $('#status').textContent = 'bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }

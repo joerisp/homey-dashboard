@@ -91,6 +91,13 @@
   .temps .tvl{font-size:32px;font-weight:500;letter-spacing:-.5px}
   .temps .ttg{display:none}
 
+  /* Water */
+  .water .wrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 6px}
+  .water .wv{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:8px 12px;font-size:26px;font-weight:500}
+  .water .wv small{font-size:15px;color:var(--muted);font-weight:400}
+  .water .wv span{display:block;font-size:13px;color:var(--muted);font-weight:400}
+  .water .wv.on{color:var(--cool)}
+
   /* Stroomprijs-grafiek */
   .pricechart svg{width:100%;height:118px;display:block;margin-top:4px}
   .pc-head{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;color:var(--muted);margin:0 4px}
@@ -454,6 +461,16 @@ async function loadHourly(){
     if (list.length) PRICE.hours = list;
   }catch(e){ setTimeout(() => loadHourly().then(render), 60000); }
 }
+function waterCard(devs){
+  const w = devs.filter(d => has(d,'measure_water') || has(d,'meter_water.daily'));
+  if (!w.length) return '';
+  const flow = w.reduce((s,d) => s + (v(d,'measure_water') || 0), 0);
+  const day = w.reduce((s,d) => s + (v(d,'meter_water.daily') || 0), 0) * 1000;
+  const on = flow > 0;
+  return `<section class="zone water"><h2>Water</h2><div class="wrow">
+    <div class="wv ${on ? 'on' : ''}">${nf1.format(flow)}<small> L/min</small><span>${on ? 'kraan loopt' : 'nu'}</span></div>
+    <div class="wv">${nf0.format(day)}<small> L</small><span>vandaag</span></div></div></section>`;
+}
 function priceCard(){
   const hrs = PRICE.hours; if (!hrs || !hrs.length) return '';
   const now = Date.now(), cur = hrs.filter(h => h.t <= now).pop() || hrs[0];
@@ -654,7 +671,7 @@ function render(){
   $('#energy').innerHTML = energy(devs);
   $('#tariff').innerHTML = tariffBar();
   const groups = {};
-  const inStrip = d => (d.energyObj && d.energyObj.cumulative) || has(d,'meter_power.imported') || ['solarpanel','battery','homebattery'].includes(d.class);
+  const inStrip = d => has(d,'measure_water') || has(d,'meter_water.daily') || (d.energyObj && d.energyObj.cumulative) || has(d,'meter_power.imported') || ['solarpanel','battery','homebattery'].includes(d.class);
   devs.forEach(d => { if (inStrip(d)) return; const z = zoneName(d.zone); if (HIDE_ZONES.includes(z.toLowerCase())) return; if (HIDE_TILES.includes((d.name||'').trim().toLowerCase())) return; if (NO_LIGHTS.includes(z.toLowerCase()) && d.class === 'light') return; if (TEMP_ONLY.includes(z.toLowerCase()) && !((has(d,'measure_temperature') || has(d,'target_temperature')) && d.available !== false)) return; const tOnly = TEMP_ONLY.includes(z.toLowerCase()) && !has(d,'target_temperature'); const t = tile(tOnly ? {...d, capabilities: d.capabilities.filter(c => /^measure_(temperature|humidity)$/.test(c))} : d); if (!t) return; (groups[z] = groups[z] || []).push([d, t]); });
   let names = Object.keys(groups);
   if (CFG.zones.length){
@@ -664,7 +681,7 @@ function render(){
   $('#zinner').innerHTML = tempsCard(devs) + names.map(n => {
     const items = groups[n].sort((a,b) => (a[0].class === 'light' ? 0 : 1) - (b[0].class === 'light' ? 0 : 1) || a[0].name.localeCompare(b[0].name,'nl'));
     return `<section class="zone"><h2>${esc(n)}</h2><div class="tiles">${items.map(x => x[1]).join('')}</div></section>`;
-  }).join('') + priceCard() || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';
+  }).join('') + priceCard() + waterCard(devs) || '<p style="color:var(--muted)">Geen apparaten gevonden voor deze selectie.</p>';
   fitZones();
   $('#status').textContent = 'bijgewerkt ' + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
